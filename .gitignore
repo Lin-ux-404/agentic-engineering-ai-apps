@@ -1,0 +1,52 @@
+# ========================
+# Backend (Python/FastAPI)
+# ========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ========================
+# Frontend (Node.js/Vite/TypeScript)
+# ========================
+node_modules/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+
+# ========================
+# Environment & Secrets
+# ========================
+.env
+.env.*
+!.env.example
+
+# ========================
+# OS & Editor
+# ========================
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# ========================
+# Logs
+# ========================
+*.log
+logs/
