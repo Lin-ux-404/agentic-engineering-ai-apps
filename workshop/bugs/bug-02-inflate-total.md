@@ -43,6 +43,9 @@ only. Active sessions must be included in the *session list* but excluded from t
 Work through the steps below in order. Each step tells you **what speckit command to run**,
 **what to type**, and **what to do with the output**.
 
+Speckit will automatically create the branch `workshop/bug-02-inflate-total` and
+save spec artifacts to `specs/bug-02-inflate-total/` when you run the first command below.
+
 ---
 
 ### Step 1 — Clarify the intended behaviour (`/speckit.clarify`)

@@ -15,7 +15,6 @@ source .venv/bin/activate
 .venv\Scripts\activate
 
 pip install -r requirements.txt
-pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 Run the following command to start the backend:

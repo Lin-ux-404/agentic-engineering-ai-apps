@@ -47,6 +47,9 @@ Work through the steps below in order. This is a **new feature** rather than a b
 the workflow starts with `/speckit.specify` to draft the user story, then uses
 `/speckit.tasks` to plan the work before any code is written.
 
+Speckit will automatically create the branch `workshop/feature-01-break-timer` and
+save spec artifacts to `specs/feature-01-break-timer/` when you run the first command below.
+
 ---
 
 ### Step 1 — Write the user story (`/speckit.specify`)

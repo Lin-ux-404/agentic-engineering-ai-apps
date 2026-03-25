@@ -36,20 +36,34 @@ command to run and what to type at each stage.
 
 ---
 
+## Branching Strategy
+
+Each exercise runs on its own isolated branch. Speckit creates the branch and saves spec
+artifacts automatically when you run the first speckit command for that exercise — you don't
+need to do anything manually.
+
+| Exercise | Branch (created by speckit) | Spec folder (populated by speckit) |
+|----------|-----------------------------|-------------------------------------|
+| Bug 01   | `workshop/bug-01-session-list-order-overflow` | `specs/bug-01-session-list-order-overflow/` |
+| Bug 02   | `workshop/bug-02-inflate-total`               | `specs/bug-02-inflate-total/` |
+| Feature 01 | `workshop/feature-01-break-timer`           | `specs/feature-01-break-timer/` |
+
+---
+
 ## Bugs
 
-| # | File | Title | Component | Speckit Focus |
-|---|------|-------|-----------|---------------|
-| 1 | [bug-01-session-list-order-overflow.md](bugs/bug-01-session-list-order-overflow.md) | Session List Order & Overflow | Frontend | `/speckit.clarify` → `/speckit.specify` |
-| 2 | [bug-02-inflate-total.md](bugs/bug-02-inflate-total.md) | Today's Total Includes Active Session Time | Backend | `/speckit.clarify` → `/speckit.specify` |
+| # | File | Title | Component | Branch | Speckit Focus |
+|---|------|-------|-----------|--------|---------------|
+| 1 | [bug-01-session-list-order-overflow.md](bugs/bug-01-session-list-order-overflow.md) | Session List Order & Overflow | Frontend | `workshop/bug-01-session-list-order-overflow` | `/speckit.clarify` → `/speckit.specify` |
+| 2 | [bug-02-inflate-total.md](bugs/bug-02-inflate-total.md) | Today's Total Includes Active Session Time | Backend | `workshop/bug-02-inflate-total` | `/speckit.clarify` → `/speckit.specify` |
 
 ---
 
 ## Features
 
-| # | File | Title | Component | Speckit Focus |
-|---|------|-------|-----------|---------------|
-| 1 | [feature-01-break-timer.md](features/feature-01-break-timer.md) | Break Timer | Frontend | `/speckit.specify` → `/speckit.tasks` |
+| # | File | Title | Component | Branch | Speckit Focus |
+|---|------|-------|-----------|--------|---------------|
+| 1 | [feature-01-break-timer.md](features/feature-01-break-timer.md) | Break Timer | Frontend | `workshop/feature-01-break-timer` | `/speckit.specify` → `/speckit.tasks` |
 
 ---
 

@@ -46,6 +46,9 @@ In `index.css`, add `max-height: 18rem; overflow-y: auto;` to `.session-list`.
 Work through the steps below in order. Each step tells you **what speckit command to run**,
 **what to type**, and **what to do with the output**.
 
+Speckit will automatically create the branch `workshop/bug-01-session-list-order-overflow` and
+save spec artifacts to `specs/bug-01-session-list-order-overflow/` when you run the first command below.
+
 ---
 
 ### Step 1 — Clarify the intended behaviour (`/speckit.clarify`)
