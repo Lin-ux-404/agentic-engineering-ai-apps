@@ -104,3 +104,10 @@ cd backend && ruff check src/ tests/ && mypy src/
 # Frontend
 cd frontend && npm run lint && npm run typecheck
 ```
+
+
+Relevant odcumentation:
+- https://github.com/github/spec-kit/blob/main/spec-driven.md
+
+Relevant repository:
+- https://github.com/github/spec-kit

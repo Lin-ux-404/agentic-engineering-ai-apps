@@ -46,12 +46,28 @@ In `index.css`, add `max-height: 18rem; overflow-y: auto;` to `.session-list`.
 Work through the steps below in order. Each step tells you **what speckit command to run**,
 **what to type**, and **what to do with the output**.
 
+This bug fix uses the same full specification pipeline as a new feature:
+`/speckit.clarify` → `/speckit.specify` → `/speckit.plan` → `/speckit.tasks` → `/speckit.implement`
+— speckit handles everything including writing tests, applying the fix, and running verification.
+
 Speckit will automatically create the branch `workshop/bug-01-session-list-order-overflow` and
 save spec artifacts to `specs/bug-01-session-list-order-overflow/` when you run the first command below.
 
 ---
 
-### Step 1 — Clarify the intended behaviour (`/speckit.clarify`)
+### Step 1 — Reproduce the bug
+Understand what is currently going on first by reproducing the bug.
+
+1. Start the backend: `cd backend && uvicorn src.main:app --reload`
+2. Start the frontend: `cd frontend && npm run dev`
+3. Click **Start**, then immediately **Stop** — repeat 8–10 times to generate several sessions.
+4. **Observe**:
+   - Sessions are listed oldest-first (earliest time at the top).
+   - The page scrolls rather than the list panel.
+
+---
+
+### Step 2 — Clarify the intended behaviour (`/speckit.clarify`)
 
 Before touching any code, use `/speckit.clarify` to ask the spec targeted questions about
 how the session list should look and behave.
@@ -71,17 +87,6 @@ how the session list should look and behave.
   though the API returns them ascending.
 - Confirmation that the panel must be scrollable when there are many sessions — the page
   layout must not be disturbed by a long list.
-
----
-
-### Step 2 — Reproduce the bug
-
-1. Start the backend: `cd backend && uvicorn src.main:app --reload`
-2. Start the frontend: `cd frontend && npm run dev`
-3. Click **Start**, then immediately **Stop** — repeat 8–10 times to generate several sessions.
-4. **Observe**:
-   - Sessions are listed oldest-first (earliest time at the top).
-   - The page scrolls rather than the list panel.
 
 ---
 
@@ -109,74 +114,64 @@ acceptance criteria.
 
 ---
 
-### Step 4 — Write failing tests
+### Step 4 — Create the implementation plan (`/speckit.plan`)
 
-Open `frontend/src/components/__tests__/TodaySummary.test.tsx` and add these two tests:
+Use `/speckit.plan` to translate the spec into a technical design before breaking it into tasks.
 
-```tsx
-it('renders most recent session first', () => {
-  const older = { ...completedSession, id: 1, start_at: '2026-01-01T09:00:00' };
-  const newer = { ...completedSession, id: 2, start_at: '2026-01-01T09:30:00' };
-  render(<TodaySummary sessions={[older, newer]} totalFocusedMinutes={50} />);
-  const rows = screen.getAllByRole('listitem');
-  expect(rows[0]).toHaveTextContent('09:30');  // newer first
-  expect(rows[1]).toHaveTextContent('09:00');
-});
-
-it('session list has overflow scroll styling', () => {
-  render(<TodaySummary sessions={[completedSession]} totalFocusedMinutes={25} />);
-  const list = screen.getByRole('list');
-  expect(list).toHaveClass('session-list');
-  // Snapshot or style check — the class must exist and CSS must cap the height
-});
+**Run this command:**
+```
+/speckit.plan
 ```
 
-Run to confirm they **fail**:
-```bash
-cd frontend && npm test
-```
+**What to look for in the output:**
+- A `plan.md` written to your spec directory.
+- Identification of the two affected files: `TodaySummary.tsx` (display order) and `index.css`
+  (height constraint and overflow scroll).
+- Confirmation that no backend changes are required — sessions are already persisted and
+  returned correctly by `GET /sessions/today`; this is a pure display-layer fix.
 
 ---
 
-### Step 5 — Apply the fix
+### Step 5 — Generate implementation tasks (`/speckit.tasks`)
 
-**`frontend/src/components/TodaySummary.tsx`** — reverse sessions before rendering:
+Use `/speckit.tasks` to break the plan into ordered, concrete implementation steps.
 
-```tsx
-<ul className="session-list" aria-label="Today's sessions">
-  {[...sessions].reverse().map((s) => (   // ← spread + reverse
-    <SessionRow key={s.id} session={s} />
-  ))}
-</ul>
+**Run this command:**
+```
+/speckit.tasks
 ```
 
-**`frontend/src/index.css`** — cap the list height and enable internal scroll:
-
-```css
-.session-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 18rem;     /* ← add */
-  overflow-y: auto;      /* ← add */
-}
-```
+**What to look for in the output:**
+- A numbered `tasks.md` covering at minimum: reversing the sessions array in `TodaySummary.tsx`,
+  adding the `max-height` and `overflow-y` rules to `.session-list` in `index.css`, and writing
+  the two tests that verify ordering and scroll containment.
+- Tasks ordered so tests are written before implementation changes.
 
 ---
 
-### Step 6 — Verify
+### Step 6 — Implement the fix (`/speckit.implement`)
 
-```bash
-# Frontend tests (must show your new tests passing)
-cd frontend && npm test
+Use `/speckit.implement` to execute every task in `tasks.md` automatically — writing the
+failing tests, applying the code changes, and running all verification checks.
 
-# Type check
-npm run typecheck
-
-# Lint
-npm run lint
+**Run this command:**
 ```
+/speckit.implement
+```
+
+**What to look for in the output:**
+- Tests written first and confirmed failing, then the fix applied.
+- `TodaySummary.tsx` updated to reverse the sessions array.
+- `.session-list` in `index.css` updated with `max-height` and `overflow-y: auto`.
+- All checks green at the end: `npm test`, `npm run typecheck`, `npm run lint`.
+
+
+### Step 7 - Verify the results
+**Verify manually:**
+1. Reload the app in the browser.
+2. Create 8–10 sessions by clicking **Start** then **Stop** in quick succession.
+3. Confirm the most recent session appears **at the top** of the list.
+4. Confirm a scroll bar appears **inside the panel** — not on the page — once the list overflows.
 
 All checks must be green before the exercise is complete.
 
