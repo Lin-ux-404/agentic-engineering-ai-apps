@@ -279,11 +279,12 @@ async def get_today(db: aiosqlite.Connection) -> TodayResponse:
         for r in rows
     ]
 
-    # Only terminal sessions contribute to the total
-    total_seconds = sum(
-        (s.focused_seconds or 0) for s in sessions if s.status in ("completed", "stopped_early")
+    # Sum per-session floor-divided minutes so the total matches the displayed per-row values
+    total_minutes = sum(
+        (s.focused_seconds or 0) // 60
+        for s in sessions
+        if s.status in ("completed", "stopped_early")
     )
-    total_minutes = total_seconds // 60
 
     return TodayResponse(
         date=today,

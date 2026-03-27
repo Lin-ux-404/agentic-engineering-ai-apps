@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 from typing import Any
 
 import pytest
@@ -258,6 +259,83 @@ async def test_today_multiple_sessions_total(client: AsyncClient) -> None:
     resp = await client.get("/sessions/today")
     data = resp.json()
     assert len(data["sessions"]) == 2
-    # total_focused_minutes should be sum of focused_seconds // 60
-    total_fs = sum(s["focused_seconds"] or 0 for s in data["sessions"])
-    assert data["total_focused_minutes"] == total_fs // 60
+    # total_focused_minutes must equal the sum of per-session floor-divided minutes
+    per_row_minutes = sum((s["focused_seconds"] or 0) // 60 for s in data["sessions"])
+    assert data["total_focused_minutes"] == per_row_minutes
+
+
+@pytest.mark.asyncio
+async def test_today_total_consistent_with_sub_minute_sessions(
+    client: AsyncClient,
+    tmp_path: Any,
+    monkeypatch: Any,
+) -> None:
+    """Regression: two sub-minute sessions must not inflate the total to 1 min.
+
+    If each session is 37 s (displays '0 min'), the total must also be 0 — not 1.
+    """
+    import aiosqlite
+
+    import src.database as db_mod
+
+    date_key = datetime.datetime.now().strftime("%Y-%m-%d")
+    now = datetime.datetime.now(datetime.UTC).isoformat()
+
+    async with aiosqlite.connect(db_mod.DB_PATH) as db:
+        for _ in range(2):
+            await db.execute(
+                """INSERT INTO sessions
+                   (start_at, end_at, status, configured_minutes,
+                    focused_seconds, paused_seconds, date_key)
+                   VALUES (?, ?, 'stopped_early', 25, 37, 0, ?)""",
+                (now, now, date_key),
+            )
+        await db.commit()
+
+    resp = await client.get("/sessions/today")
+    data = resp.json()
+
+    assert len(data["sessions"]) == 2
+    for s in data["sessions"]:
+        assert s["focused_seconds"] == 37
+    # Each row displays 0 min (37 // 60 == 0), so total must also be 0
+    assert data["total_focused_minutes"] == 0
+
+
+@pytest.mark.asyncio
+async def test_today_total_sums_per_row_minutes_not_raw_seconds(
+    client: AsyncClient,
+    tmp_path: Any,
+    monkeypatch: Any,
+) -> None:
+    """One session at 37 s (0 min) and one at 90 s (1 min): total must be 1, not 2."""
+    import aiosqlite
+
+    import src.database as db_mod
+
+    date_key = datetime.datetime.now().strftime("%Y-%m-%d")
+    now = datetime.datetime.now(datetime.UTC).isoformat()
+
+    async with aiosqlite.connect(db_mod.DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO sessions
+               (start_at, end_at, status, configured_minutes,
+                focused_seconds, paused_seconds, date_key)
+               VALUES (?, ?, 'stopped_early', 25, 37, 0, ?)""",
+            (now, now, date_key),
+        )
+        await db.execute(
+            """INSERT INTO sessions
+               (start_at, end_at, status, configured_minutes,
+                focused_seconds, paused_seconds, date_key)
+               VALUES (?, ?, 'completed', 25, 90, 0, ?)""",
+            (now, now, date_key),
+        )
+        await db.commit()
+
+    resp = await client.get("/sessions/today")
+    data = resp.json()
+
+    assert len(data["sessions"]) == 2
+    # 37 // 60 = 0, 90 // 60 = 1 → total = 1
+    assert data["total_focused_minutes"] == 1
