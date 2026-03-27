@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { OfflineError, apiFetch } from '../api/client';
 import type {
   ActiveSessionResponse,
+  BreakCountdownResponse,
   SessionSummaryResponse,
   SettingsResponse,
   TodayResponse,
@@ -12,7 +13,7 @@ import type {
 // State shape
 // ---------------------------------------------------------------------------
 
-export type TimerStatus = 'idle' | 'running' | 'paused' | 'completed' | 'stopped_early';
+export type TimerStatus = 'idle' | 'running' | 'paused' | 'break' | 'completed' | 'stopped_early';
 
 interface TimerState {
   status: TimerStatus;
@@ -24,6 +25,11 @@ interface TimerState {
   pausedAt: number | null;      // Unix ms when current pause started; null if not paused
 
   remainingSeconds: number | null; // Computed each tick
+
+  breakId: number | null;
+  breakStartAt: number | null;       // Unix ms
+  breakExpectedEndAt: number | null;  // Unix ms
+  breakConfiguredSeconds: number | null;
 
   todaySessions: SessionSummaryResponse[];
   totalFocusedMinutes: number;
@@ -38,6 +44,7 @@ interface TimerActions {
   pauseSession: () => Promise<void>;
   resumeSession: () => Promise<void>;
   stopSession: () => Promise<void>;
+  skipBreak: () => Promise<void>;
   tick: () => void;
   loadToday: () => Promise<void>;
   loadSettings: () => Promise<void>;
@@ -85,6 +92,15 @@ function applyActiveSession(
   };
 }
 
+function clearBreak(): Partial<TimerState> {
+  return {
+    breakId: null,
+    breakStartAt: null,
+    breakExpectedEndAt: null,
+    breakConfiguredSeconds: null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -98,6 +114,10 @@ export const useTimerStore = create<TimerState & TimerActions>((set, get) => ({
   pausedSeconds: null,
   pausedAt: null,
   remainingSeconds: null,
+  breakId: null,
+  breakStartAt: null,
+  breakExpectedEndAt: null,
+  breakConfiguredSeconds: null,
   todaySessions: [],
   totalFocusedMinutes: 0,
   settings: DEFAULT_SETTINGS,
@@ -108,10 +128,34 @@ export const useTimerStore = create<TimerState & TimerActions>((set, get) => ({
     try {
       const session = await apiFetch<ActiveSessionResponse | null>('/sessions/active');
       if (session && (session.status === 'running' || session.status === 'paused')) {
-        set({ ...applyActiveSession(session), backendReachable: true });
+        set({ ...applyActiveSession(session), ...clearBreak(), backendReachable: true });
       } else {
-        set({ status: 'idle', sessionId: null, startAt: null, configuredSeconds: null,
-              pausedSeconds: null, pausedAt: null, remainingSeconds: null, backendReachable: true });
+        // No active session — check for active break
+        const brk = await apiFetch<BreakCountdownResponse | null>('/breaks/active');
+        if (brk && brk.status === 'active') {
+          const breakStartAt = new Date(brk.start_at).getTime();
+          const breakExpectedEndAt = new Date(brk.expected_end_at).getTime();
+          set({
+            status: 'break',
+            sessionId: null,
+            startAt: null,
+            configuredSeconds: null,
+            pausedSeconds: null,
+            pausedAt: null,
+            breakId: brk.id,
+            breakStartAt,
+            breakExpectedEndAt,
+            breakConfiguredSeconds: brk.configured_minutes * 60,
+            remainingSeconds: brk.remaining_seconds,
+            backendReachable: true,
+          });
+        } else {
+          set({
+            status: 'idle', sessionId: null, startAt: null, configuredSeconds: null,
+            pausedSeconds: null, pausedAt: null, remainingSeconds: null,
+            ...clearBreak(), backendReachable: true,
+          });
+        }
       }
     } catch (err) {
       if (err instanceof OfflineError) set({ backendReachable: false });
@@ -180,7 +224,28 @@ export const useTimerStore = create<TimerState & TimerActions>((set, get) => ({
       });
       set({
         status: 'idle', sessionId: null, startAt: null, configuredSeconds: null,
-        pausedSeconds: null, pausedAt: null, remainingSeconds: null, backendReachable: true,
+        pausedSeconds: null, pausedAt: null, remainingSeconds: null,
+        ...clearBreak(), backendReachable: true,
+      });
+      await get().loadToday();
+    } catch (err) {
+      if (err instanceof OfflineError) set({ backendReachable: false });
+      else throw err;
+    }
+  },
+
+  skipBreak: async () => {
+    const { breakId } = get();
+    if (breakId === null) return;
+    try {
+      await apiFetch<BreakCountdownResponse>(`/breaks/${breakId}/skip`, {
+        method: 'POST',
+      });
+      set({
+        status: 'idle',
+        remainingSeconds: null,
+        ...clearBreak(),
+        backendReachable: true,
       });
       await get().loadToday();
     } catch (err) {
@@ -190,21 +255,36 @@ export const useTimerStore = create<TimerState & TimerActions>((set, get) => ({
   },
 
   tick: () => {
-    const { status, startAt, configuredSeconds, pausedSeconds, pausedAt, sessionId } = get();
+    const { status, startAt, configuredSeconds, pausedSeconds, pausedAt, sessionId, breakExpectedEndAt } = get();
+
+    // Handle break countdown
+    if (status === 'break' && breakExpectedEndAt !== null) {
+      const remaining = Math.max(0, Math.round((breakExpectedEndAt - Date.now()) / 1000));
+      if (remaining <= 0) {
+        set({
+          status: 'idle',
+          remainingSeconds: null,
+          ...clearBreak(),
+        });
+        // Trigger backend auto-finish on next read
+        apiFetch<BreakCountdownResponse | null>('/breaks/active').catch(() => {});
+      } else {
+        set({ remainingSeconds: remaining });
+      }
+      return;
+    }
+
+    // Handle focus session countdown
     if (status !== 'running' || startAt === null || configuredSeconds === null || pausedSeconds === null) return;
 
     const remaining = computeRemaining(startAt, configuredSeconds, pausedSeconds, pausedAt);
     if (remaining <= 0) {
-      // Auto-complete
       set({ remainingSeconds: 0 });
       if (sessionId !== null) {
         apiFetch<ActiveSessionResponse>(`/sessions/${sessionId}/complete`, { method: 'POST' })
           .then(() => {
-            set({
-              status: 'completed',
-              remainingSeconds: 0,
-            });
-            return get().loadToday();
+            // After completing, hydrate to pick up any auto-created break
+            return get().hydrate();
           })
           .catch(() => {/* ignore — backend will auto-complete on next GET active */});
       }

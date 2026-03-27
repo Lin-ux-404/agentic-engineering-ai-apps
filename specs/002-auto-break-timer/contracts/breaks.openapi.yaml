@@ -1,0 +1,122 @@
+openapi: 3.0.3
+info:
+  title: Focus Timer Break Contract
+  version: 0.1.0
+  description: Contract additions for automatic break countdown and skip-break behavior.
+paths:
+  /settings:
+    put:
+      summary: Update timer settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsRequest'
+      responses:
+        '200':
+          description: Saved settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+  /breaks/active:
+    get:
+      summary: Get the current active break countdown, if one exists
+      responses:
+        '200':
+          description: Active break or null if no break is active
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/BreakCountdownResponse'
+                  - type: 'null'
+  /breaks/{breakId}/skip:
+    post:
+      summary: Skip an active break countdown
+      parameters:
+        - name: breakId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Break updated to skipped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BreakCountdownResponse'
+        '404':
+          description: Break not found
+        '409':
+          description: Break is not active and cannot be skipped
+components:
+  schemas:
+    SettingsRequest:
+      type: object
+      required:
+        - focus_minutes
+        - break_minutes
+      properties:
+        focus_minutes:
+          type: integer
+          minimum: 1
+          maximum: 480
+        break_minutes:
+          type: integer
+          minimum: 0
+          maximum: 120
+    SettingsResponse:
+      type: object
+      required:
+        - focus_minutes
+        - break_minutes
+      properties:
+        focus_minutes:
+          type: integer
+        break_minutes:
+          type: integer
+    BreakCountdownResponse:
+      type: object
+      required:
+        - id
+        - session_id
+        - start_at
+        - expected_end_at
+        - configured_minutes
+        - remaining_seconds
+        - status
+      properties:
+        id:
+          type: integer
+        session_id:
+          type: integer
+        start_at:
+          type: string
+          format: date-time
+        expected_end_at:
+          type: string
+          format: date-time
+        configured_minutes:
+          type: integer
+          minimum: 1
+          maximum: 120
+        remaining_seconds:
+          type: number
+          format: float
+        status:
+          type: string
+          enum:
+            - active
+            - skipped
+            - finished
+        skipped_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true

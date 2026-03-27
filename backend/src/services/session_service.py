@@ -6,6 +6,7 @@ import aiosqlite
 from fastapi import HTTPException
 
 from ..models import ActiveSessionResponse, SessionSummaryResponse, TodayResponse
+from . import breaks_service
 
 
 def _now_utc() -> datetime.datetime:
@@ -77,6 +78,15 @@ async def get_active_with_auto_complete(
             (end_at, focused, row["id"]),
         )
         await db.commit()
+
+        # Auto-create break if break_minutes > 0 (FR-001, FR-002, FR-011)
+        # FR-011: When break_minutes == 0, no break record is created and the frontend
+        # returns directly to idle/ready state on next hydrate.
+        async with db.execute("SELECT break_minutes FROM settings WHERE id = 1") as cur:
+            settings_row = await cur.fetchone()
+        if settings_row and settings_row["break_minutes"] > 0:
+            await breaks_service.create_break(db, row["id"], settings_row["break_minutes"])
+
         async with db.execute("SELECT * FROM sessions WHERE id=?", (row["id"],)) as cur:
             row = await cur.fetchone()
         remaining = 0.0
@@ -145,6 +155,14 @@ async def complete(db: aiosqlite.Connection, session_id: int) -> ActiveSessionRe
         (end_at, focused, session_id),
     )
     await db.commit()
+
+    # Auto-create break if break_minutes > 0 (FR-001, FR-002, FR-011)
+    # FR-011: When break_minutes == 0, no break record is created and the frontend
+    # returns directly to idle/ready state on next hydrate.
+    async with db.execute("SELECT break_minutes FROM settings WHERE id = 1") as cur:
+        settings_row = await cur.fetchone()
+    if settings_row and settings_row["break_minutes"] > 0:
+        await breaks_service.create_break(db, session_id, settings_row["break_minutes"])
 
     async with db.execute("SELECT * FROM sessions WHERE id=?", (session_id,)) as cur:
         row = await cur.fetchone()

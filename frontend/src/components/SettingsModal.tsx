@@ -33,8 +33,8 @@ export function SettingsModal({ settings, onSave, onClose }: Props) {
     if (!Number.isInteger(fm) || fm < 1 || fm > 480) {
       return 'Focus duration must be a whole number between 1 and 480.';
     }
-    if (!Number.isInteger(bm) || bm < 1 || bm > 120) {
-      return 'Break duration must be a whole number between 1 and 120.';
+    if (!Number.isInteger(bm) || bm < 0 || bm > 120) {
+      return 'Break duration must be a whole number between 0 and 120.';
     }
     return null;
   };
@@ -86,7 +86,7 @@ export function SettingsModal({ settings, onSave, onClose }: Props) {
             type="number"
             value={breakMinutes}
             onChange={(e) => { setBreakMinutes(e.target.value); setError(null); }}
-            min={1}
+            min={0}
             max={120}
             aria-label="Break duration in minutes"
           />

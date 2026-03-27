@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -45,9 +47,21 @@ class TodayResponse(BaseModel):
 
 class SettingsRequest(BaseModel):
     focus_minutes: int = Field(..., ge=1, le=480)
-    break_minutes: int = Field(..., ge=1, le=120)
+    break_minutes: int = Field(..., ge=0, le=120)
 
 
 class SettingsResponse(BaseModel):
     focus_minutes: int
     break_minutes: int
+
+
+class BreakCountdownResponse(BaseModel):
+    id: int
+    session_id: int
+    start_at: str
+    expected_end_at: str
+    configured_minutes: int = Field(ge=1, le=120)
+    remaining_seconds: float
+    status: Literal["active", "skipped", "finished"]
+    skipped_at: str | None = None
+    finished_at: str | None = None

@@ -17,6 +17,7 @@ export function App() {
     pauseSession,
     resumeSession,
     stopSession,
+    skipBreak,
     saveSettings,
   } = useTimerService();
 
@@ -49,6 +50,7 @@ export function App() {
           onPause={() => { void pauseSession(); }}
           onResume={() => { void resumeSession(); }}
           onStop={() => { void stopSession(); }}
+          onSkipBreak={() => { void skipBreak(); }}
         />
         <TodaySummary
           sessions={todaySessions}

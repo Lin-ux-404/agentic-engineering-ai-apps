@@ -29,3 +29,15 @@ export interface SettingsResponse {
   focus_minutes: number;
   break_minutes: number;
 }
+
+export interface BreakCountdownResponse {
+  id: number;
+  session_id: number;
+  start_at: string;
+  expected_end_at: string;
+  configured_minutes: number;
+  remaining_seconds: number;
+  status: 'active' | 'skipped' | 'finished';
+  skipped_at: string | null;
+  finished_at: string | null;
+}

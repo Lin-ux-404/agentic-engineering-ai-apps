@@ -7,6 +7,7 @@ interface Props {
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
+  onSkipBreak: () => void;
 }
 
 export const Controls = React.memo(function Controls({
@@ -15,6 +16,7 @@ export const Controls = React.memo(function Controls({
   onPause,
   onResume,
   onStop,
+  onSkipBreak,
 }: Props) {
   return (
     <div className="controls" role="group" aria-label="Timer controls">
@@ -64,6 +66,16 @@ export const Controls = React.memo(function Controls({
             Stop
           </button>
         </>
+      ) : null}
+
+      {status === 'break' ? (
+        <button
+          className="btn btn-secondary"
+          onClick={onSkipBreak}
+          aria-label="Skip break and start next session"
+        >
+          Skip break
+        </button>
       ) : null}
     </div>
   );

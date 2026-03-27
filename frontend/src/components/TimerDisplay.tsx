@@ -17,6 +17,7 @@ const STATUS_LABELS: Record<TimerStatus, string> = {
   idle: 'Idle',
   running: 'Running',
   paused: 'Paused',
+  break: 'Break',
   completed: 'Completed',
   stopped_early: 'Stopped early',
 };

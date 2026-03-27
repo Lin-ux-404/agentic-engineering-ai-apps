@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db
-from .routers import sessions, settings
+from .routers import breaks, sessions, settings
 
 
 @asynccontextmanager
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(breaks.router)
 app.include_router(sessions.router)
 app.include_router(settings.router)
 
